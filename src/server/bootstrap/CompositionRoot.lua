@@ -38,9 +38,12 @@ function CompositionRoot.start()
     local worldFolderProvider = WorldFolderProvider.new(Workspace, "ExpedicaoWorld")
     local remoteEventProvider = RemoteEventProvider.new(ReplicatedStorage)
     local loadMarkerProvider = LoadMarkerProvider.new(ReplicatedStorage, "ExpedicaoLoaded")
+    local whisperSpawnMarkerProvider = LoadMarkerProvider.new(Workspace, "WhisperSpawn", true)
 
     local linkEvent = remoteEventProvider:ensure("OpenGroupLinkPrompt")
     local introEvent = remoteEventProvider:ensure("PlaySpawnIntroCinematic")
+    local introAfterFallEvent = remoteEventProvider:ensure("Intro_AfterFall")
+    local expeditionStartEvent = remoteEventProvider:ensure("Expedition_Start")
 
     local billboardScreenFactory = BillboardScreenFactory.new()
     local armsPoseController = ArmsPoseController.new(RunService)
@@ -51,14 +54,21 @@ function CompositionRoot.start()
     local signBuilder = SignBuilder.new(config, billboardScreenFactory)
     local spawnIntroService = SpawnIntroService.new(
         introEvent,
+        introAfterFallEvent,
         introConfig,
         IntroRules,
         config,
         armsPoseController,
-        characterSafetyGuard
+        characterSafetyGuard,
+        whisperSpawnMarkerProvider
     )
 
-    local boardInteractionService = BoardInteractionService.new(linkEvent, config, WorldRules)
+    local boardInteractionService = BoardInteractionService.new(
+        linkEvent,
+        expeditionStartEvent,
+        config,
+        WorldRules
+    )
     local playerSpawnService = PlayerSpawnService.new(
         Players,
         worldFolderProvider,

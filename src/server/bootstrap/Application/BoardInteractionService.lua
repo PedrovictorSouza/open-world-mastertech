@@ -1,9 +1,10 @@
 local BoardInteractionService = {}
 BoardInteractionService.__index = BoardInteractionService
 
-function BoardInteractionService.new(linkEvent, config, worldRules)
+function BoardInteractionService.new(linkEvent, expeditionStartEvent, config, worldRules)
     return setmetatable({
         _linkEvent = linkEvent,
+        _expeditionStartEvent = expeditionStartEvent,
         _config = config,
         _worldRules = worldRules,
     }, BoardInteractionService)
@@ -28,6 +29,12 @@ function BoardInteractionService:bind(signModel)
     end
 
     clickDetector.MouseClick:Connect(function(player)
+        player:SetAttribute("ExpeditionStarted", true)
+
+        self._expeditionStartEvent:FireClient(player, {
+            Source = "OutdoorBoardClick",
+        })
+
         local payload = self._worldRules.createGroupLinkPayload(self._config)
         self._linkEvent:FireClient(player, payload)
     end)

@@ -64,14 +64,21 @@ function SpawnIntroClientService:_bindCharacter(character)
     local function tryPlayFromAttribute()
         local hasCinematicFlag = character:GetAttribute("SpawnIntroCinematic")
         local isProtected = character:GetAttribute("IntroProtected")
+        local isSkyValidated = character:GetAttribute("SkySpawnValidated")
 
         self:_debugLog(
             "Attribute trigger",
             "SpawnIntroCinematic=", tostring(hasCinematicFlag),
-            "IntroProtected=", tostring(isProtected)
+            "IntroProtected=", tostring(isProtected),
+            "SkySpawnValidated=", tostring(isSkyValidated)
         )
 
         if not hasCinematicFlag and not isProtected then
+            return
+        end
+
+        if isSkyValidated ~= true then
+            self:_debugLog("Ignored attribute trigger: character is not in sky yet")
             return
         end
 
@@ -84,6 +91,10 @@ function SpawnIntroClientService:_bindCharacter(character)
     end)
 
     character:GetAttributeChangedSignal("IntroProtected"):Connect(function()
+        tryPlayFromAttribute()
+    end)
+
+    character:GetAttributeChangedSignal("SkySpawnValidated"):Connect(function()
         tryPlayFromAttribute()
     end)
 
@@ -119,6 +130,11 @@ function SpawnIntroClientService:_play(character, payload)
 
     if not character or not character.Parent then
         self:_debugLog("Ignored play: invalid character")
+        return
+    end
+
+    if character:GetAttribute("SkySpawnValidated") ~= true then
+        self:_debugLog("Ignored play: sky gate not validated")
         return
     end
 

@@ -1,6 +1,9 @@
 local PlayerSpawnService = {}
 PlayerSpawnService.__index = PlayerSpawnService
 
+local SKY_SPAWN_RETRY_WINDOW_SECONDS = 4
+local SKY_SPAWN_RETRY_INTERVAL_SECONDS = 0.1
+
 function PlayerSpawnService.new(players, worldFolderProvider, config, worldRules, spawnIntroService)
     return setmetatable({
         _players = players,
@@ -11,6 +14,29 @@ function PlayerSpawnService.new(players, worldFolderProvider, config, worldRules
         _isBound = false,
         _hasPlayedIntro = {},
     }, PlayerSpawnService)
+end
+
+function PlayerSpawnService:_startSkySpawnWithRetry(player, character, spawnPosition)
+    local hasStartedIntro = self._spawnIntroService:play(player, character, spawnPosition)
+    if hasStartedIntro then
+        return true
+    end
+
+    local startedAt = os.clock()
+    repeat
+        if not character.Parent or not player.Parent then
+            return false
+        end
+
+        task.wait(SKY_SPAWN_RETRY_INTERVAL_SECONDS)
+        hasStartedIntro = self._spawnIntroService:play(player, character, spawnPosition)
+        if hasStartedIntro then
+            return true
+        end
+    until os.clock() - startedAt >= SKY_SPAWN_RETRY_WINDOW_SECONDS
+
+    warn("Sky spawn intro failed to start after retries; using default spawn fallback for", player.Name)
+    return false
 end
 
 function PlayerSpawnService:bind()
@@ -54,7 +80,7 @@ function PlayerSpawnService:_positionCharacter(player, character)
     local spawnPosition = spawnPart.Position + Vector3.new(0, 4, 0)
 
     if not self._hasPlayedIntro[player] then
-        local hasStartedIntro = self._spawnIntroService:play(player, character, spawnPosition)
+        local hasStartedIntro = self:_startSkySpawnWithRetry(player, character, spawnPosition)
         if hasStartedIntro then
             self._hasPlayedIntro[player] = true
             return
